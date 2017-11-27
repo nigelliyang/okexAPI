@@ -9,6 +9,7 @@ import logging
 import time
 import json
 import os
+import pandas as pd
 
 # 初始化apikey，secretkey,url
 fileName = 'key.json'
@@ -28,11 +29,48 @@ okcoinSpot = OKCoinSpot(okcoinRESTURL, apikey, secretkey)
 # 期货API
 okcoinFuture = OKCoinFuture(okcoinRESTURL, apikey, secretkey)
 
+symbol = 'eth_usd'
+contracttype = 'quarter'
+contractmultiplier = 10
+leverage = '20'
+fee = -0.00025
+ratio = 0.01
+amount = 1
+ordertype = {"openlong": 1, "openshort": 2, "closelong": 3, "closeshort": 4}
+
+orderinfo = pd.DataFrame(columns=["symbol", "contracttype", "price", "amount", "ordertype"])
+
 print("Started...")
 while True:
-
     try:
-        pass
+        posinfo = okcoinFuture.future_position(symbol, contracttype)
+        posinfo = json.loads(posinfo)
+        if posinfo['result']:
+            posinfo['holding']
+
+        # query orderinfo
+        queryorderinfo = okcoinFuture.future_orderinfo(symbol, contracttype, '-1', '1', '0', '50')
+        queryorderinfo = json.loads(queryorderinfo)
+
+        if queryorderinfo['result']:
+            for order in queryorderinfo['orders']:
+                pass
+
+        futureticker = okcoinFuture.future_ticker(symbol, contracttype)
+        ticker = futureticker['ticker']
+        ask = round(ticker['last'] * (1 + ratio), 3)
+        bid = round(ticker['last'] * (1 - ratio), 3)
+        # profit = (contractmultiplier / bid - contractmultiplier / ask) * amount*ticker['last'] - fee * amount * contractmultiplier * 2
+
+
+
+        orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=ask, amount=amount,
+                                                tradeType=ordertype['openshort'], matchPrice='0', leverRate=leverage)
+        orderstatus = json.loads(orderstatus)
+        if orderstatus['result']:
+            orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, ask, amount, ordertype['openshort']]
+
+
     except Exception as e:
         logging.exception(e)
 
@@ -68,8 +106,8 @@ while True:
 # print (u' 现货历史订单信息查询 ')
 # print (okcoinSpot.orderHistory('ltc_usd','0','1','2'))
 
-print(u' 期货行情信息')
-print(okcoinFuture.future_ticker('ltc_usd', 'this_week'))
+# print(u' 期货行情信息')
+# print(okcoinFuture.future_ticker('ltc_usd', 'this_week'))
 
 # print (u' 期货市场深度信息')
 # print (okcoinFuture.future_depth('btc_usd','this_week','6'))
@@ -86,23 +124,23 @@ print(okcoinFuture.future_ticker('ltc_usd', 'this_week'))
 # print (u'获取预估交割价')
 # print (okcoinFuture.future_estimated_price('ltc_usd'))
 
-print(u'获取虚拟合约的K线信息')
-print(okcoinFuture.future_kline('ltc_usd', 'this_week', '1min', '50'))
+# print(u'获取虚拟合约的K线信息')
+# print(okcoinFuture.future_kline('ltc_usd', 'this_week', '1min', '50'))
 
-print(u'获取当前可用合约总持仓量')
-print(okcoinFuture.future_hold_amount('ltc_usd', 'this_week'))
-
-print(u'获取合约坐高买价和最低卖价格')
-print(okcoinFuture.future_price_limit('ltc_usd', 'this_week'))
-
-print(u'获取全仓账户信息')
-print(okcoinFuture.future_userinfo())
-
-print(u'获取全仓持仓信息')
-print(okcoinFuture.future_position('ltc_usd', 'this_week'))
+# print(u'获取当前可用合约总持仓量')
+# print(okcoinFuture.future_hold_amount('ltc_usd', 'this_week'))
+#
+# print(u'获取合约坐高买价和最低卖价格')
+# print(okcoinFuture.future_price_limit('ltc_usd', 'this_week'))
+#
+# print(u'获取全仓账户信息')
+# print(okcoinFuture.future_userinfo())
+#
+# print(u'获取全仓持仓信息')
+# print(okcoinFuture.future_position('ltc_usd', 'this_week'))
 
 # print (u'期货下单')
-print(okcoinFuture.future_trade('etc_usd', 'this_week', '0.1', '1', '1', '0', '20'))
+# print(okcoinFuture.future_trade('etc_usd', 'this_week', '0.1', '1', '1', '0', '20'))
 
 # print (u'期货批量下单')
 # print (okcoinFuture.future_batchTrade('ltc_usd','this_week','[{price:0.1,amount:1,type:1,match_price:0},{price:0.1,amount:3,type:1,match_price:0}]','20'))
