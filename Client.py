@@ -7,11 +7,20 @@ from OkcoinSpotAPI import OKCoinSpot
 from OkcoinFutureAPI import OKCoinFuture
 import logging
 import time
+import json
+import os
 
 # 初始化apikey，secretkey,url
-apikey = 'b8859b95-5f85-4d95-9533-3a7037844788'
-secretkey = 'ED5959256407848D74937A1EC2678894'
-okcoinRESTURL = 'www.okex.com'  # 请求注意：国内账号需要 修改为 www.okex.cn
+fileName = 'key.json'
+path = os.path.abspath(os.path.dirname(__file__))
+fileName = os.path.join(path, fileName)
+# 解析json文件
+with open(fileName) as data_file:
+    setting = json.load(data_file)
+    data_file.close()
+apikey = str(setting['apiKey'])
+secretkey = str(setting['secretKey'])
+okcoinRESTURL = 'www.okex.com'
 
 # 现货API
 okcoinSpot = OKCoinSpot(okcoinRESTURL, apikey, secretkey)
@@ -21,8 +30,6 @@ okcoinFuture = OKCoinFuture(okcoinRESTURL, apikey, secretkey)
 
 print("Started...")
 while True:
-
-
 
     try:
         pass
@@ -88,14 +95,14 @@ print(okcoinFuture.future_hold_amount('ltc_usd', 'this_week'))
 print(u'获取合约坐高买价和最低卖价格')
 print(okcoinFuture.future_price_limit('ltc_usd', 'this_week'))
 
-print (u'获取全仓账户信息')
-print (okcoinFuture.future_userinfo())
+print(u'获取全仓账户信息')
+print(okcoinFuture.future_userinfo())
 
-print (u'获取全仓持仓信息')
-print (okcoinFuture.future_position('ltc_usd','this_week'))
+print(u'获取全仓持仓信息')
+print(okcoinFuture.future_position('ltc_usd', 'this_week'))
 
 # print (u'期货下单')
-print (okcoinFuture.future_trade('etc_usd','this_week','0.1','1','1','0','20'))
+print(okcoinFuture.future_trade('etc_usd', 'this_week', '0.1', '1', '1', '0', '20'))
 
 # print (u'期货批量下单')
 # print (okcoinFuture.future_batchTrade('ltc_usd','this_week','[{price:0.1,amount:1,type:1,match_price:0},{price:0.1,amount:3,type:1,match_price:0}]','20'))
