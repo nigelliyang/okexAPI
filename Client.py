@@ -29,80 +29,128 @@ okcoinSpot = OKCoinSpot(okcoinRESTURL, apikey, secretkey)
 # 期货API
 okcoinFuture = OKCoinFuture(okcoinRESTURL, apikey, secretkey)
 
-symbol = 'eth_usd'
-contracttype = 'quarter'
-contractmultiplier = 10
-leverage = '20'
-fee = -0.00025
-ratio = 0.001
-amount = 1
-ordertype = {"openlong": 1, "openshort": 2, "closelong": 3, "closeshort": 4}
-
-orderinfo = pd.DataFrame(columns=["symbol", "contracttype", "price", "amount", "ordertype"])
-position = []
-print("Started...")
-while True:
-    try:
-        posinfo = okcoinFuture.future_position(symbol, contracttype)
-        posinfo = json.loads(posinfo)
-        if posinfo['result']:
-            position = posinfo['holding'][0]
-
-        # query orderinfo
-        queryorderinfo = okcoinFuture.future_orderinfo(symbol, contracttype, '-1', '1', '0', '50')
-        queryorderinfo = json.loads(queryorderinfo)
-
-        if queryorderinfo['result']:
-            for order in queryorderinfo['orders']:
-                orderinfo.loc[order['order_id']] = [order['symbol'], contracttype, order['price'], order['amount'],
-                                                    order['type']]
-        ordernum = max(sum(orderinfo['ordertype'] == 1) + sum(orderinfo['ordertype'] == 4),
-                       sum(orderinfo['ordertype'] == 2) + sum(orderinfo['ordertype'] == 3))
-
-        if ordernum < 50:
-            futureticker = okcoinFuture.future_ticker(symbol, contracttype)
-            ticker = futureticker['ticker']
-            ask = round(ticker['last'] * (1 + ratio), 3)
-            bid = round(ticker['last'] * (1 - ratio), 3)
-            # profit = (contractmultiplier / bid - contractmultiplier / ask) * amount*ticker['last'] - fee * amount * contractmultiplier * 2
-
-            if position['buy_available'] > amount:
-                orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=ask, amount=amount,
-                                                        tradeType=ordertype['closelong'], matchPrice='0',
-                                                        leverRate=leverage)
-                orderstatus = json.loads(orderstatus)
-                if orderstatus['result']:
-                    position['buy_available'] = position['buy_available'] - amount
-                    orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, ask, amount, ordertype['closelong']]
+spotinfo = okcoinSpot.userinfo()
+spotinfo = json.loads(spotinfo)
+freeamount = 0
+freezedamount = 0
+if spotinfo['result']:
+    freeinfo = spotinfo['info']['funds']['free']
+    freezedinfo = spotinfo['info']['funds']['freezed']
+    for symbol in freeinfo:
+        if float(freeinfo[symbol]) != 0:
+            if symbol == 'btc':
+                quote = 1.0
+            elif symbol == 'usdt':
+                quote = 1.0 / float(okcoinSpot.ticker('btc_usdt')['ticker']['last'])
             else:
-                orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=ask, amount=amount,
-                                                        tradeType=ordertype['openshort'], matchPrice='0',
-                                                        leverRate=leverage)
-                orderstatus = json.loads(orderstatus)
-                if orderstatus['result']:
-                    orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, ask, amount, ordertype['openshort']]
+                quote = float(okcoinSpot.ticker(symbol + '_btc')['ticker']['last'])
+            freeamount += float(freeinfo[symbol]) * quote
+            freezedamount += float(freezedinfo[symbol]) * quote
 
-            if position['sell_available'] > amount:
-                orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=bid, amount=amount,
-                                                        tradeType=ordertype['closeshort'], matchPrice='0',
-                                                        leverRate=leverage)
-                orderstatus = json.loads(orderstatus)
-                if orderstatus['result']:
-                    position['sell_available'] = position['sell_available'] - amount
-                    orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, bid, amount,
-                                                              ordertype['closeshort']]
-            else:
-                orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=bid, amount=amount,
-                                                        tradeType=ordertype['openlong'], matchPrice='0',
-                                                        leverRate=leverage)
-                orderstatus = json.loads(orderstatus)
-                if orderstatus['result']:
-                    orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, bid, amount, ordertype['openlong']]
+            pass
 
-    except Exception as e:
-        logging.exception(e)
+spotamount = freezedamount + freeamount
+btcquote = 110000
+print('Okex')
+print('SpotAccount')
+print('BTC: ' + str(spotamount))
+print('RMB: ' + str(btcquote * spotamount))
 
-    time.sleep(10)
+# tradeinfo = okcoinFuture.future_trades(symbol=symbol, contractType='this_week')
+
+futinfo = okcoinFuture.future_userinfo()
+futinfo = json.loads(futinfo)
+accountrights = 0
+
+if futinfo['result']:
+    futaccount = futinfo['info']
+    for symbol in futaccount:
+        if symbol == 'btc':
+            accountrights += futaccount[symbol]['account_rights']
+        else:
+            quote = float(okcoinSpot.ticker(symbol + '_btc')['ticker']['last'])
+            accountrights += futaccount[symbol]['account_rights'] * quote
+
+print('FutAccount')
+print('BTC: ' + str(accountrights))
+print('RMB: ' + str(btcquote * accountrights))
+
+pass
+# symbol = 'etc_usd'
+# contracttype = 'quarter'
+# contractmultiplier = 10
+# timeinteval = 10  # seconds
+# leverage = '20'
+# fee = -0.00025
+# ratio = 0.001
+# amount = 1
+# ordertype = {"openlong": 1, "openshort": 2, "closelong": 3, "closeshort": 4}
+#
+# orderinfo = pd.DataFrame(columns=["symbol", "contracttype", "price", "amount", "ordertype"])
+# position = []
+# print("Started...")
+# while True:
+#     try:
+#         posinfo = okcoinFuture.future_position(symbol, contracttype)
+#         posinfo = json.loads(posinfo)
+#         if posinfo['result']:
+#             position = posinfo['holding'][0]
+#
+#         # query orderinfo
+#         queryorderinfo = okcoinFuture.future_orderinfo(symbol, contracttype, '-1', '1', '0', '50')
+#         queryorderinfo = json.loads(queryorderinfo)
+#
+#         if queryorderinfo['result']:
+#             for order in queryorderinfo['orders']:
+#                 orderinfo.loc[order['order_id']] = [order['symbol'], contracttype, order['price'], order['amount'],
+#                                                     order['type']]
+#         ordernum = max(sum(orderinfo['ordertype'] == 1) + sum(orderinfo['ordertype'] == 4),
+#                        sum(orderinfo['ordertype'] == 2) + sum(orderinfo['ordertype'] == 3))
+#
+#         if ordernum < 50:
+#             futureticker = okcoinFuture.future_ticker(symbol, contracttype)
+#             ticker = futureticker['ticker']
+#             ask = round(ticker['last'] * (1 + ratio), 3)
+#             bid = round(ticker['last'] * (1 - ratio), 3)
+#             # profit = (contractmultiplier / bid - contractmultiplier / ask) * amount*ticker['last'] - fee * amount * contractmultiplier * 2
+#
+#             if position['buy_available'] > amount:
+#                 orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=ask, amount=amount,
+#                                                         tradeType=ordertype['closelong'], matchPrice='0',
+#                                                         leverRate=leverage)
+#                 orderstatus = json.loads(orderstatus)
+#                 if orderstatus['result']:
+#                     position['buy_available'] = position['buy_available'] - amount
+#                     orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, ask, amount, ordertype['closelong']]
+#             else:
+#                 orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=ask, amount=amount,
+#                                                         tradeType=ordertype['openshort'], matchPrice='0',
+#                                                         leverRate=leverage)
+#                 orderstatus = json.loads(orderstatus)
+#                 if orderstatus['result']:
+#                     orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, ask, amount, ordertype['openshort']]
+#
+#             if position['sell_available'] > amount:
+#                 orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=bid, amount=amount,
+#                                                         tradeType=ordertype['closeshort'], matchPrice='0',
+#                                                         leverRate=leverage)
+#                 orderstatus = json.loads(orderstatus)
+#                 if orderstatus['result']:
+#                     position['sell_available'] = position['sell_available'] - amount
+#                     orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, bid, amount,
+#                                                               ordertype['closeshort']]
+#             else:
+#                 orderstatus = okcoinFuture.future_trade(symbol, contracttype, price=bid, amount=amount,
+#                                                         tradeType=ordertype['openlong'], matchPrice='0',
+#                                                         leverRate=leverage)
+#                 orderstatus = json.loads(orderstatus)
+#                 if orderstatus['result']:
+#                     orderinfo.loc[orderstatus['order_id']] = [symbol, contracttype, bid, amount, ordertype['openlong']]
+#
+#     except Exception as e:
+#         logging.exception(e)
+#
+#     time.sleep(timeinteval)
 
 # print (u' 现货行情 ')
 # print (okcoinSpot.ticker('ltc_btc'))
