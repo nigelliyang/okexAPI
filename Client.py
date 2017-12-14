@@ -19,62 +19,64 @@ fileName = os.path.join(path, fileName)
 with open(fileName) as data_file:
     setting = json.load(data_file)
     data_file.close()
-apikey = str(setting['apiKey'])
-secretkey = str(setting['secretKey'])
-okcoinRESTURL = 'www.okex.com'
+for accountname in setting:
+    apikey = str(setting[accountname]['apiKey'])
+    secretkey = str(setting[accountname]['secretKey'])
+    okcoinRESTURL = 'www.okex.com'
 
-# 现货API
-okcoinSpot = OKCoinSpot(okcoinRESTURL, apikey, secretkey)
+    # 现货API
+    okcoinSpot = OKCoinSpot(okcoinRESTURL, apikey, secretkey)
 
-# 期货API
-okcoinFuture = OKCoinFuture(okcoinRESTURL, apikey, secretkey)
+    # 期货API
+    okcoinFuture = OKCoinFuture(okcoinRESTURL, apikey, secretkey)
 
-spotinfo = okcoinSpot.userinfo()
-spotinfo = json.loads(spotinfo)
-freeamount = 0
-freezedamount = 0
-if spotinfo['result']:
-    freeinfo = spotinfo['info']['funds']['free']
-    freezedinfo = spotinfo['info']['funds']['freezed']
-    for symbol in freeinfo:
-        if float(freeinfo[symbol]) != 0:
+    spotinfo = okcoinSpot.userinfo()
+    spotinfo = json.loads(spotinfo)
+    freeamount = 0
+    freezedamount = 0
+    if spotinfo['result']:
+        freeinfo = spotinfo['info']['funds']['free']
+        freezedinfo = spotinfo['info']['funds']['freezed']
+        for symbol in freeinfo:
+            if float(freeinfo[symbol]) != 0:
+                if symbol == 'btc':
+                    quote = 1.0
+                elif symbol == 'usdt':
+                    quote = 1.0 / float(okcoinSpot.ticker('btc_usdt')['ticker']['last'])
+                else:
+                    quote = float(okcoinSpot.ticker(symbol + '_btc')['ticker']['last'])
+                freeamount += float(freeinfo[symbol]) * quote
+                freezedamount += float(freezedinfo[symbol]) * quote
+
+                pass
+
+    spotamount = freezedamount + freeamount
+    btcquote = 100000
+    print("###################")
+    print('Okex ' + accountname)
+    print('SpotAccount')
+    print('BTC: ' + str(spotamount))
+    print('RMB: ' + str(btcquote * spotamount))
+
+    # tradeinfo = okcoinFuture.future_trades(symbol=symbol, contractType='this_week')
+
+    futinfo = okcoinFuture.future_userinfo()
+    futinfo = json.loads(futinfo)
+    accountrights = 0
+
+    if futinfo['result']:
+        futaccount = futinfo['info']
+        for symbol in futaccount:
             if symbol == 'btc':
-                quote = 1.0
-            elif symbol == 'usdt':
-                quote = 1.0 / float(okcoinSpot.ticker('btc_usdt')['ticker']['last'])
+                accountrights += futaccount[symbol]['account_rights']
             else:
                 quote = float(okcoinSpot.ticker(symbol + '_btc')['ticker']['last'])
-            freeamount += float(freeinfo[symbol]) * quote
-            freezedamount += float(freezedinfo[symbol]) * quote
+                accountrights += futaccount[symbol]['account_rights'] * quote
 
-            pass
-
-spotamount = freezedamount + freeamount
-btcquote = 110000
-print('Okex')
-print('SpotAccount')
-print('BTC: ' + str(spotamount))
-print('RMB: ' + str(btcquote * spotamount))
-
-# tradeinfo = okcoinFuture.future_trades(symbol=symbol, contractType='this_week')
-
-futinfo = okcoinFuture.future_userinfo()
-futinfo = json.loads(futinfo)
-accountrights = 0
-
-if futinfo['result']:
-    futaccount = futinfo['info']
-    for symbol in futaccount:
-        if symbol == 'btc':
-            accountrights += futaccount[symbol]['account_rights']
-        else:
-            quote = float(okcoinSpot.ticker(symbol + '_btc')['ticker']['last'])
-            accountrights += futaccount[symbol]['account_rights'] * quote
-
-print('FutAccount')
-print('BTC: ' + str(accountrights))
-print('RMB: ' + str(btcquote * accountrights))
-
+    print('FutAccount')
+    print('BTC: ' + str(accountrights))
+    print('RMB: ' + str(btcquote * accountrights))
+    print("###################")
 pass
 # symbol = 'etc_usd'
 # contracttype = 'quarter'
