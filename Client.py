@@ -19,6 +19,9 @@ fileName = os.path.join(path, fileName)
 with open(fileName) as data_file:
     setting = json.load(data_file)
     data_file.close()
+
+btcquote = 100000
+
 for accountname in setting:
     apikey = str(setting[accountname]['apiKey'])
     secretkey = str(setting[accountname]['secretKey'])
@@ -45,13 +48,52 @@ for accountname in setting:
                     quote = 1.0 / float(okcoinSpot.ticker('btc_usdt')['ticker']['last'])
                 else:
                     quote = float(okcoinSpot.ticker(symbol + '_btc')['ticker']['last'])
+
+                    # 统计订单收益
+                    orderbuffer = pd.DataFrame()
+                    pagenum = 0
+                    while True:
+                        try:
+                            orderhis = okcoinSpot.orderHistory(symbol + '_btc', 1, pagenum, 200)
+                        except Exception as e:
+                            print(e)
+                            continue
+                        orderhis = json.loads(orderhis)
+                        if orderhis['result']:
+                            orderbuffer = orderbuffer.append(pd.DataFrame(orderhis['orders']), ignore_index=True)
+
+                            buyorder = orderbuffer[orderbuffer['type'] == 'buy']
+                            sellorder = orderbuffer[orderbuffer['type'] == 'sell']
+
+                            buyavg = sum(buyorder['deal_amount'] * buyorder['avg_price']) / sum(buyorder['deal_amount'])
+                            sellavg = sum(sellorder['deal_amount'] * sellorder['avg_price']) / sum(
+                                sellorder['deal_amount'])
+
+                            minamount = min(sum(buyorder['deal_amount'] * buyorder['avg_price']),
+                                            sum(sellorder['deal_amount'] * sellorder['avg_price']))
+                            minvol = min(sum(buyorder['deal_amount']), sum(sellorder['deal_amount']))
+                            print(symbol + '_btc')
+                            print('pagenumber: ' + str(pagenum))
+                            print('profit: ' + str((sellavg - buyavg) * minvol * btcquote))
+                            print('fee: ' + str(2 * minamount * 0.001 * btcquote))
+                            print(
+                                'profit-fee: ' + str(((sellavg - buyavg) * minvol + 2 * minamount * 0.001) * btcquote))
+
+                            if len(orderhis['orders']) < 200:  # or pagenum > 10:
+                                break
+                            else:
+                                pagenum += 1
+                        else:
+                            break
+
+                    pass
+
                 freeamount += float(freeinfo[symbol]) * quote
                 freezedamount += float(freezedinfo[symbol]) * quote
 
                 pass
 
     spotamount = freezedamount + freeamount
-    btcquote = 100000
     print("###################")
     print('Okex ' + accountname)
     print('SpotAccount')
