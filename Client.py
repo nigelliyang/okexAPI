@@ -55,35 +55,48 @@ for accountname in setting:
                     while True:
                         try:
                             orderhis = okcoinSpot.orderHistory(symbol + '_btc', 1, pagenum, 200)
+
+                            orderhis = json.loads(orderhis)
+                            if orderhis['result'] and len(orderhis['orders']) > 0:
+                                orderbuffer = orderbuffer.append(pd.DataFrame(orderhis['orders']), ignore_index=True)
+
+                                buyorder = orderbuffer[orderbuffer['type'] == 'buy']
+                                sellorder = orderbuffer[orderbuffer['type'] == 'sell']
+
+                                if len(buyorder) == 0 or len(sellorder) == 0:
+                                    print(pagenum)
+                                    pagenum += 1
+                                    continue
+
+                                buyavg = sum(buyorder['deal_amount'] * buyorder['avg_price']) / sum(
+                                    buyorder['deal_amount'])
+                                sellavg = sum(sellorder['deal_amount'] * sellorder['avg_price']) / sum(
+                                    sellorder['deal_amount'])
+
+                                minamount = min(sum(buyorder['deal_amount'] * buyorder['avg_price']),
+                                                sum(sellorder['deal_amount'] * sellorder['avg_price']))
+                                minvol = min(sum(buyorder['deal_amount']), sum(sellorder['deal_amount']))
+                                # print(symbol + '_btc')
+                                # print('pagenumber: ' + str(pagenum))
+                                # print('profit: ' + str((sellavg - buyavg) * minvol * btcquote))
+                                # print('fee: ' + str(2 * minamount * 0.001 * btcquote))
+                                # print(
+                                #     'profit-fee: ' + str(((sellavg - buyavg) * minvol + 2 * minamount * 0.001) * btcquote))
+                                if len(orderhis['orders']) < 200:  # or pagenum > 10:
+                                    print(symbol + '_btc')
+                                    print('pagenumber: ' + str(pagenum))
+                                    print('profit: ' + str((sellavg - buyavg) * minvol * btcquote))
+                                    print('fee: ' + str(2 * minamount * 0.001 * btcquote))
+                                    print('profit-fee: ' + str(
+                                        ((sellavg - buyavg) * minvol + 2 * minamount * 0.001) * btcquote))
+                                    break
+                                else:
+                                    print(pagenum)
+                                    pagenum += 1
+                            else:
+                                break
                         except Exception as e:
                             print(e)
-                            continue
-                        orderhis = json.loads(orderhis)
-                        if orderhis['result']:
-                            orderbuffer = orderbuffer.append(pd.DataFrame(orderhis['orders']), ignore_index=True)
-
-                            buyorder = orderbuffer[orderbuffer['type'] == 'buy']
-                            sellorder = orderbuffer[orderbuffer['type'] == 'sell']
-
-                            buyavg = sum(buyorder['deal_amount'] * buyorder['avg_price']) / sum(buyorder['deal_amount'])
-                            sellavg = sum(sellorder['deal_amount'] * sellorder['avg_price']) / sum(
-                                sellorder['deal_amount'])
-
-                            minamount = min(sum(buyorder['deal_amount'] * buyorder['avg_price']),
-                                            sum(sellorder['deal_amount'] * sellorder['avg_price']))
-                            minvol = min(sum(buyorder['deal_amount']), sum(sellorder['deal_amount']))
-                            print(symbol + '_btc')
-                            print('pagenumber: ' + str(pagenum))
-                            print('profit: ' + str((sellavg - buyavg) * minvol * btcquote))
-                            print('fee: ' + str(2 * minamount * 0.001 * btcquote))
-                            print(
-                                'profit-fee: ' + str(((sellavg - buyavg) * minvol + 2 * minamount * 0.001) * btcquote))
-
-                            if len(orderhis['orders']) < 200:  # or pagenum > 10:
-                                break
-                            else:
-                                pagenum += 1
-                        else:
                             break
 
                     pass
