@@ -20,7 +20,7 @@ with open(fileName) as data_file:
     setting = json.load(data_file)
     data_file.close()
 
-btcquote = 100000
+btcquote = 90000
 
 for accountname in setting:
     apikey = str(setting[accountname]['apiKey'])
@@ -76,12 +76,12 @@ for accountname in setting:
                                 minamount = min(sum(buyorder['deal_amount'] * buyorder['avg_price']),
                                                 sum(sellorder['deal_amount'] * sellorder['avg_price']))
                                 minvol = min(sum(buyorder['deal_amount']), sum(sellorder['deal_amount']))
-                                # print(symbol + '_btc')
-                                # print('pagenumber: ' + str(pagenum))
-                                # print('profit: ' + str((sellavg - buyavg) * minvol * btcquote))
-                                # print('fee: ' + str(2 * minamount * 0.001 * btcquote))
-                                # print(
-                                #     'profit-fee: ' + str(((sellavg - buyavg) * minvol + 2 * minamount * 0.001) * btcquote))
+                                print(symbol + '_btc')
+                                print('pagenumber: ' + str(pagenum))
+                                print('profit: ' + str((sellavg - buyavg) * minvol * btcquote))
+                                print('fee: ' + str(2 * minamount * 0.001 * btcquote))
+                                print('profit-fee: ' + str(
+                                    ((sellavg - buyavg) * minvol + 2 * minamount * 0.001) * btcquote))
                                 if len(orderhis['orders']) < 200:  # or pagenum > 10:
                                     print(symbol + '_btc')
                                     print('pagenumber: ' + str(pagenum))
